@@ -1,10 +1,5 @@
-package com.fungames.kotlinASTC
-
-inline fun <reified T> Array<T>.toPointer() = Pointer(this.toNullableArray())
-
-inline fun <reified T> Array<T>.toNullableArray() = this as Array<T?>
-
-inline fun <reified T> Array<T?>.toNonNullableArray() = this as Array<T>
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+package me.fungames.kotlinASTC
 
 data class Int4(
     var x: Int,
@@ -63,18 +58,19 @@ data class Int4(
         return Int4(x or other.x, y or other.y, z or other.z, w or other.w)
     }
 
-    infix fun and(other: Vector4): Int4 {
+    infix fun and(other: Vector4<Int>): Int4 {
         return Int4(x and other.x, y and other.y, z and other.z, w and other.w)
     }
 }
-
-data class Vector4(
-    var x: Int,
-    var y: Int,
-    var z: Int,
-    var w: Int
+typealias UByte4 = Vector4<UByte>
+typealias UShort4 = Vector4<UShort>
+data class Vector4<T>(
+    var x: T,
+    var y: T,
+    var z: T,
+    var w: T
 ) {
-    fun setValues(x: Int, y: Int, z: Int, w: Int) {
+    fun setValues(x: T, y: T, z: T, w: T) {
         this.x = x
         this.y = y
         this.z = z

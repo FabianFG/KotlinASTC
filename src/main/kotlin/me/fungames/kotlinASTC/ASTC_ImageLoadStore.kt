@@ -1,78 +1,105 @@
-@file:Suppress("NAME_SHADOWING")
+/*----------------------------------------------------------------------------*/
+/**
+ *	This confidential and proprietary software may be used only as
+ *	authorised by a licensing agreement from ARM Limited
+ *	(C) COPYRIGHT 2011-2012 ARM Limited
+ *	ALL RIGHTS RESERVED
+ *
+ *	The entire notice above must be reproduced on all authorised
+ *	copies and copies may only be made to the extent permitted
+ *	by a licensing agreement from ARM Limited.
+ *
+ *	@brief	Functions for managing ASTC codec images.
+ *	@author rewritten to Kotlin by FunGames
+ */
+/*----------------------------------------------------------------------------*/
 
-package com.fungames.kotlinASTC
+@file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_UNSIGNED_LITERALS")
+package me.fungames.kotlinASTC
 
+import me.fungames.kotlinPointers.*
 import kotlin.math.*
 
 @kotlin.ExperimentalUnsignedTypes
-data class ASTCCodecImage(val bitness : Bitness, val xsize : Int, val ysize : Int, val zsize : Int, val padding : Int, val xDim : Int, val yDim : Int, val decodeMode: ASTC_DecodeMode, val swizzlePattern: SwizzlePattern) {
-    val imageData8 : Pointer<Pointer<Pointer<Byte>>>?
-    val imageData16 : Pointer<Pointer<Pointer<Int>>>?
+data class ASTCCodecImage(val bitness : Bitness, val xsize : Int, val ysize : Int, val zsize : Int, val padding : Int, val xDim : Int, val yDim : Int, val decodeMode: AstcDecodeMode, val swizzlePattern: SwizzlePattern) {
+    private val imageData8 : Pointer<Pointer<UBytePointer>>?
+    private val imageData16 : Pointer<Pointer<UShortPointer>>?
 
-    constructor(bitness : Bitness, xsize : Int, ysize : Int, zsize : Int, padding : Int, blockDimX : Int, blockDimY : Int) : this(bitness, xsize, ysize, zsize, padding, blockDimX, blockDimY, ASTC_DecodeMode.DECODE_LDR, SwizzlePattern(0, 1, 2, 3))
+    constructor(bitness : Bitness, xsize : Int, ysize : Int, zsize : Int, padding : Int, blockDimX : Int, blockDimY : Int) : this(bitness, xsize, ysize, zsize, padding, blockDimX, blockDimY,
+        AstcDecodeMode.DECODE_LDR,
+        SwizzlePattern(0, 1, 2, 3)
+    )
 
     private val xBlocks = (xsize + xDim - 1) / xDim
     private val yBlocks = (ysize + yDim - 1) / yDim
     private val zBlocks = zsize
 
-    //TODO ?
     private val zDim = zsize
 
     init {
-        val exsize = xsize + 2 * padding
-        val eysize = ysize + 2 * padding
-        val ezsize = if(zsize == 1) 1 else zsize + 2 * padding
+        val exSize = xsize + 2 * padding
+        val eySize = ysize + 2 * padding
+        val ezSize = if(zsize == 1) 1 else zsize + 2 * padding
         when(bitness) {
             Bitness.BITNESS_8 -> {
-                imageData8 = Pointer(arrayOfNulls(ezsize))
-                imageData8[0] = Pointer(arrayOfNulls(ezsize * eysize))
-                imageData8[0][0] = Pointer(arrayOfNulls(4 * ezsize * eysize * exsize))
-                for(i in 1 until ezsize) {
-                    imageData8[i] = imageData8[0] + i * eysize
-                    imageData8[i][0] = imageData8[0][0] + 4 * i * exsize * eysize
+                val dataArray = UBytePointer(4 * ezSize * eySize * exSize)
+                imageData8 = Pointer(Array(ezSize) {Pointer(Array(ezSize * eySize) {dataArray})})
+                for(i in 1 until ezSize) {
+                    imageData8[i] = imageData8[0] + i * eySize
+                    imageData8[i][0] = imageData8[0][0] + 4 * i * exSize * eySize
                 }
-                for(i in 0 until ezsize)
-                    for(j in 1 until eysize)
-                        imageData8[i][j] = imageData8[i][0] + 4 * j * exsize
+                for(i in 0 until ezSize)
+                    for(j in 1 until eySize)
+                        imageData8[i][j] = imageData8[i][0] + 4 * j * exSize
                 imageData16 = null
             }
             Bitness.BITNESS_16 -> {
-                imageData16 = Pointer(arrayOfNulls(ezsize))
-                imageData16[0] = Pointer(arrayOfNulls(ezsize * eysize))
-                imageData16[0][0] = Pointer(arrayOfNulls(4 * ezsize * eysize * exsize))
-                for(i in 1 until ezsize) {
-                    imageData16[i] = imageData16[0] + i * eysize
-                    imageData16[i][0] = imageData16[0][0] + 4 * i * exsize * eysize
+                imageData16 = Pointer(Array(ezSize) {Pointer(Array(ezSize * eySize) {UShortPointer(4 * ezSize * eySize * exSize)})})
+                for(i in 1 until ezSize) {
+                    imageData16[i] = imageData16[0] + i * eySize
+                    imageData16[i][0] = imageData16[0][0] + 4 * i * exSize * eySize
                 }
-                for(i in 0 until ezsize)
-                    for(j in 1 until eysize)
-                        imageData16[i][j] = imageData16[i][0] + 4 * j * exsize
+                for(i in 0 until ezSize)
+                    for(j in 1 until eySize)
+                        imageData16[i][j] = imageData16[i][0] + 4 * j * exSize
                 imageData8 = null
             }
         }
     }
 
-    fun decode(data : ByteArray) = decode(data.toTypedArray())
-    fun decode(data : Array<Byte>) {
-        val data = data.toPointer()
+    fun decode(data : ByteArray) {
+        val pointer = data.asPointer()
         for (z in 0 until zBlocks)
             for (y in 0 until yBlocks)
                 for (x in 0 until xBlocks) {
                     val offset = ((y * xBlocks) + x) * 16
-                    val bp = data + offset
+                    val bp = pointer + offset
                     val pcb = PhysicalCompressedBlock(bp)
                     val scb = physicalToSymbolic(xDim, yDim, zDim, pcb)
-                    val pb = decompressSymbolicBlock(decodeMode, xDim, yDim, zDim, x * xDim, y * yDim, z * zDim, scb)
+                    val pb = decompressSymbolicBlock(
+                        decodeMode,
+                        xDim,
+                        yDim,
+                        zDim,
+                        x * xDim,
+                        y * yDim,
+                        z * zDim,
+                        scb
+                    )
                     writeImageblock(pb, xDim, yDim, zDim, x * xDim, y * yDim, z * zDim, swizzlePattern)
                 }
 
     }
 
-    fun toBuffer() : ByteArray {
-        if( imageData8 != null) {
-            return imageData8[0][0].data.toNonNullableArray().toByteArray()
-        }
-        return ByteArray(0)
+    fun toBuffer() = toUBuffer().toByteArray()
+    fun toUBuffer() : UByteArray {
+        require(imageData8 != null)
+        return imageData8[0][0].asArray()
+    }
+    fun toShortBuffer() = toUShortBuffer().toShortArray()
+    fun toUShortBuffer() : UShortArray {
+        require(imageData16 != null)
+        return imageData16[0][0].asArray()
     }
 
     fun initializeImage() {
@@ -82,39 +109,38 @@ data class ASTCCodecImage(val bitness : Bitness, val xsize : Int, val ysize : In
 
         when(bitness) {
             Bitness.BITNESS_8 -> {
-                if(imageData8 == null)
-                    throw IllegalStateException()
+                checkNotNull(imageData8)
                 for(z in 0 until ezsize)
                     for(y in 0 until eysize)
                         for(x in 0 until exsize) {
-                            imageData8[z][y][4 * x] = 0
-                            imageData8[z][y][4 * x + 1] = 0
-                            imageData8[z][y][4 * x + 2] = 0
-                            imageData8[z][y][4 * x + 3] = 0xFF.toByte()
+                            imageData8[z][y][4 * x] = 0u
+                            imageData8[z][y][4 * x + 1] = 0u
+                            imageData8[z][y][4 * x + 2] = 0u
+                            imageData8[z][y][4 * x + 3] = 0xFFu
                         }
             }
             Bitness.BITNESS_16 -> {
-                if(imageData16 == null)
-                    throw IllegalStateException()
+                checkNotNull(imageData16)
                 for(z in  0 until ezsize)
                     for(y in  0 until eysize)
                         for(x in 0 until exsize) {
-                            imageData16[z][y][4 * x] = 0
-                            imageData16[z][y][4 * x + 1] = 0
-                            imageData16[z][y][4 * x + 2] = 0
-                            imageData16[z][y][4 * x + 3] = 0x3C00
+                            imageData16[z][y][4 * x] = 0u
+                            imageData16[z][y][4 * x + 1] = 0u
+                            imageData16[z][y][4 * x + 2] = 0u
+                            imageData16[z][y][4 * x + 3] = 0x3C00u
                         }
             }
         }
     }
 
-    fun writeImageblock(pb: ImageBlock,	// picture-block to initialize with image data. We assume that orig_data is valid.
+    private fun writeImageblock(pb: ImageBlock,	// picture-block to initialize with image data. We assume that orig_data is valid.
                         // block dimensions
                         xDim: Int, yDim: Int, zDim: Int,
                         // position to write block to
-                        xPos : Int, yPos : Int, zPos : Int, swz : SwizzlePattern) {
-        val fptr = pb.origData.toPointer()
-        val nptr = pb.nanTexel.toPointer()
+                        xPos : Int, yPos : Int, zPos : Int, swz : SwizzlePattern
+    ) {
+        var fptr = pb.origData.asPointer()
+        var nptr = pb.nanTexel.asPointer()
 
         val data = Array(7) {0f}
         data[4] = 0.0f
@@ -131,10 +157,10 @@ data class ASTCCodecImage(val bitness : Bitness, val xsize : Int, val ysize : In
                             if (xi >= 0 && yi >= 0 && zi >= 0 && xi < xsize && yi < ysize && zi < zsize) {
                                 if(nptr[0]) {
                                     // NaN-pixel, but we can't display it. Display purple instead.
-                                    imageData8[zi][yi][4 * xi] = 0xFF.toByte()
-                                    imageData8[zi][yi][4 * xi + 1] = 0x00.toByte()
-                                    imageData8[zi][yi][4 * xi + 2] = 0xFF.toByte()
-                                    imageData8[zi][yi][4 * xi + 3] = 0xFF.toByte()
+                                    imageData8[zi][yi][4 * xi] = 0xFFu
+                                    imageData8[zi][yi][4 * xi + 1] = 0x00u
+                                    imageData8[zi][yi][4 * xi + 2] = 0xFFu
+                                    imageData8[zi][yi][4 * xi + 3] = 0xFFu
                                 } else {
                                     // apply swizzle
                                     if (performSrgbTransform) {
@@ -189,10 +215,10 @@ data class ASTCCodecImage(val bitness : Bitness, val xsize : Int, val ysize : In
                                     val bi = floor(data[swz.b] * 255.0f + 0.5f).toInt()
                                     val ai = floor(data[swz.a] * 255.0f + 0.5f).toInt()
 
-                                    imageData8[zi][yi][4 * xi] = ri.toByte()
-                                    imageData8[zi][yi][4 * xi + 1] = gi.toByte()
-                                    imageData8[zi][yi][4 * xi + 2] = bi.toByte()
-                                    imageData8[zi][yi][4 * xi + 3] = ai.toByte()
+                                    imageData8[zi][yi][4 * xi] = ri.toUByte()
+                                    imageData8[zi][yi][4 * xi + 1] = gi.toUByte()
+                                    imageData8[zi][yi][4 * xi + 2] = bi.toUByte()
+                                    imageData8[zi][yi][4 * xi + 3] = ai.toUByte()
                                 }
                             }
                             fptr += 4
@@ -208,10 +234,10 @@ data class ASTCCodecImage(val bitness : Bitness, val xsize : Int, val ysize : In
 
                         if (xi >= 0 && yi >= 0 && zi >= 0 && xi < xsize && yi < ysize && zi < zsize) {
                             if(nptr[0]) {
-                                imageData16[zi][yi][4 * xi] = 0xFFFF
-                                imageData16[zi][yi][4 * xi + 1] = 0xFFFF
-                                imageData16[zi][yi][4 * xi + 2] = 0xFFFF
-                                imageData16[zi][yi][4 * xi + 3] = 0xFFFF
+                                imageData16[zi][yi][4 * xi] = 0xFFFFu
+                                imageData16[zi][yi][4 * xi + 1] = 0xFFFFu
+                                imageData16[zi][yi][4 * xi + 2] = 0xFFFFu
+                                imageData16[zi][yi][4 * xi + 3] = 0xFFFFu
                             } else {
                                 // apply swizzle
                                 if (performSrgbTransform) {
@@ -244,12 +270,12 @@ data class ASTCCodecImage(val bitness : Bitness, val xsize : Int, val ysize : In
                                 }
                                 data[3] = fptr[3]
 
-                                val x = data[0] * 2.0f - 1.0f
-                                val y = data[3] * 2.0f - 1.0f
-                                var z = 1.0f - x * x - y * y
-                                if (z < 0.0f)
-                                    z = 0.0f
-                                data[6] = (sqrt(z) * 0.5f) + 0.5f
+                                val x1 = data[0] * 2.0f - 1.0f
+                                val y1 = data[3] * 2.0f - 1.0f
+                                var z1 = 1.0f - x1 * x1 - y1 * y1
+                                if (z1 < 0.0f)
+                                    z1 = 0.0f
+                                data[6] = (sqrt(z1) * 0.5f) + 0.5f
 
                                 // clamp to [0,1]
                                 if (data[0] > 1.0f)
@@ -266,10 +292,10 @@ data class ASTCCodecImage(val bitness : Bitness, val xsize : Int, val ysize : In
                                 val b = data[swz.b].toSf16()
                                 val a = data[swz.a].toSf16()
 
-                                imageData16[zi][yi][4 * xi] = r
-                                imageData16[zi][yi][4 * xi + 1] = g
-                                imageData16[zi][yi][4 * xi + 2] = b
-                                imageData16[zi][yi][4 * xi + 3] = a
+                                imageData16[zi][yi][4 * xi] = r.toUShort()
+                                imageData16[zi][yi][4 * xi + 1] = g.toUShort()
+                                imageData16[zi][yi][4 * xi + 2] = b.toUShort()
+                                imageData16[zi][yi][4 * xi + 3] = a.toUShort()
                             }
                         }
                         fptr += 4
@@ -281,19 +307,19 @@ data class ASTCCodecImage(val bitness : Bitness, val xsize : Int, val ysize : In
 
 @kotlin.ExperimentalUnsignedTypes
 fun unorm16ToSf16(p: Int): Int {
-    var p = p
-    if (p == 0xFFFF) {
+    var p1 = p
+    if (p1 == 0xFFFF) {
         return 0x3C00 // value of 1.0 .
     }
-    if (p < 4) {
-        return (p shl 8).toUShort().toInt()
+    if (p1 < 4) {
+        return (p1 shl 8).toUShort().toInt()
     }
 
-    val lz = Integer.numberOfLeadingZeros(p) - 16
-    p = (p shl lz + 1).toUShort().toInt()
-    p = (p ushr 6).toUShort().toInt()
-    p = (p or (14 - lz shl 10)).toUShort().toInt()
-    return p
+    val lz = Integer.numberOfLeadingZeros(p1) - 16
+    p1 = (p1 shl lz + 1).toUShort().toInt()
+    p1 = (p1 ushr 6).toUShort().toInt()
+    p1 = (p1 or (14 - lz shl 10)).toUShort().toInt()
+    return p1
 }
 
 
@@ -338,12 +364,11 @@ fun floatToLns(p : Float) : Float {
         p1 = (normFrac - 0.5f) * 4096.0f
     }
 
-    if(p1 < 384.0f)
-        p1 *= 4.0f / 3.0f
-    else if (p1 <= 1408.0f)
-        p1 += 128.0f
-    else
-        p1 = (p1 + 512.0f) * (4.0f / 5.0f)
+    when {
+        p1 < 384.0f -> p1 *= 4.0f / 3.0f
+        p1 <= 1408.0f -> p1 += 128.0f
+        else -> p1 = (p1 + 512.0f) * (4.0f / 5.0f)
+    }
 
     p1 += expo * 2048.0f
     return p1 + 1.0f
@@ -354,8 +379,8 @@ fun floatToLns(p : Float) : Float {
 // helper function to initialize the orig-data from the work-data
 @kotlin.ExperimentalUnsignedTypes
 fun imageblockInitializeOrigFromWork(pb : ImageBlock, pixelCount : Int) {
-    val fptr = pb.origData.toPointer()
-    val wptr = pb.workData.toPointer()
+    var fptr = pb.origData.asPointer()
+    var wptr = pb.workData.asPointer()
 
     for (i in 0 until pixelCount) {
         if (pb.rgbLns[i]) {
@@ -381,8 +406,8 @@ fun imageblockInitializeOrigFromWork(pb : ImageBlock, pixelCount : Int) {
 
 // helper function to initialize the work-data from the orig-data
 fun imageblockInitializeWorkFromOrig(pb : ImageBlock, pixelCount : Int) {
-    val fptr = pb.origData.toPointer()
-    val wptr = pb.workData.toPointer()
+    var fptr = pb.origData.asPointer()
+    var wptr = pb.workData.asPointer()
 
     for (i in 0 until pixelCount) {
         if (pb.rgbLns[i]) {
@@ -403,17 +428,17 @@ fun imageblockInitializeWorkFromOrig(pb : ImageBlock, pixelCount : Int) {
         wptr += 4
     }
 
-    pb.origData = fptr.data.toNonNullableArray()
-    pb.workData = wptr.data.toNonNullableArray()
+    pb.origData = fptr.asArray()
+    pb.workData = wptr.asArray()
 
     imageblockInitializeDerivFromWorkAndOrig(pb, pixelCount)
 }
 
 // helper function to initialize the orig-data from the work-data
 fun imageblockInitializeDerivFromWorkAndOrig(pb : ImageBlock, pixelCount: Int) {
-    val fptr = pb.origData.toPointer()
-    val wptr = pb.workData.toPointer()
-    val dptr = pb.derivData.toPointer()
+    var fptr = pb.origData.asPointer()
+    var wptr = pb.workData.asPointer()
+    var dptr = pb.derivData.asPointer()
 
     for (i in 0 until pixelCount) {
         // compute derivatives for RGB first
@@ -473,9 +498,9 @@ fun imageblockInitializeDerivFromWorkAndOrig(pb : ImageBlock, pixelCount: Int) {
 
     }
 
-    pb.origData = fptr.data.toNonNullableArray()
-    pb.workData = wptr.data.toNonNullableArray()
-    pb.derivData = dptr.data.toNonNullableArray()
+    pb.origData = fptr.asArray()
+    pb.workData = wptr.asArray()
+    pb.derivData = dptr.asArray()
 }
 
 /**

@@ -1,15 +1,37 @@
-package com.fungames.kotlinASTC
+/*----------------------------------------------------------------------------*/
+/**
+ *	This confidential and proprietary software may be used only as
+ *	authorised by a licensing agreement from ARM Limited
+ *	(C) COPYRIGHT 2011-2012 ARM Limited
+ *	ALL RIGHTS RESERVED
+ *
+ *	The entire notice above must be reproduced on all authorised
+ *	copies and copies may only be made to the extent permitted
+ *	by a licensing agreement from ARM Limited.
+ *
+ *	@brief	Functions to generate partition tables for ASTC.
+ *
+ *			We generate tables only for the block sizes that have actually been
+ *			specified to the codec.
+ *	@author rewritten to Kotlin by FunGames
+ */
+/*----------------------------------------------------------------------------*/
+@file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_UNSIGNED_LITERALS")
+package me.fungames.kotlinASTC
+
+import me.fungames.kotlinPointers.ULongPointer
+import me.fungames.kotlinPointers.asPointer
 
 val partitionTables : Array<Array<Array<PartitionInfo>?>?> = arrayOfNulls(4096)
 
 
-fun genCanonicalizedPartitionTable(texelCount: Int, partitionTable: Array<Int>, canonicalized: Pointer<ULong>) {
+fun genCanonicalizedPartitionTable(texelCount: Int, partitionTable: UByteArray, canonicalized: ULongPointer) {
 
     val mappedIndex = Array(4) {-1}
     var mapWeightCount = 0
 
     for (i in 0 until texelCount) {
-        val index = partitionTable[i]
+        val index = partitionTable[i].toInt()
         if (mappedIndex[index] == -1)
             mappedIndex[index] = mapWeightCount++
         val xlatIndex = mappedIndex[index].toULong()
@@ -17,7 +39,7 @@ fun genCanonicalizedPartitionTable(texelCount: Int, partitionTable: Array<Int>, 
     }
 }
 
-fun compareCanonicalizedPartitionTables(part1 : Pointer<ULong>, part2 : Pointer<ULong>) : Boolean {
+fun compareCanonicalizedPartitionTables(part1 : ULongPointer, part2 : ULongPointer) : Boolean {
     if (part1[0] != part2[0])
         return false
     if (part1[1] != part2[1])
@@ -43,61 +65,69 @@ fun partitionTableZapEqualElement(xDim: Int, yDim: Int, zDim: Int, pi: Array<Par
 
     val texelCount = xDim * yDim * zDim
 
-    val canonicalizeds = Array(PARTITION_COUNT * 7) {0.toULong()}
+    val canonicalizeds = ULongArray(PARTITION_COUNT * 7)
 
     for (i in 0 until PARTITION_COUNT)
-        genCanonicalizedPartitionTable(texelCount, pi[i].partitionOfTexel, canonicalizeds.toPointer() + i * 7)
+        genCanonicalizedPartitionTable(
+            texelCount,
+            pi[i].partitionOfTexel,
+            canonicalizeds.asPointer() + i * 7
+        )
 
     for (i in 0 until PARTITION_COUNT)
         for (j in 0 until i)
-            if (compareCanonicalizedPartitionTables(canonicalizeds.toPointer() + 7* i, canonicalizeds.toPointer() + 7* j)) {
+            if (compareCanonicalizedPartitionTables(
+                    canonicalizeds.asPointer() + 7 * i,
+                    canonicalizeds.asPointer() + 7 * j
+                )
+            ) {
                 pi[i].partitionCount = 0
                 partitionTablesZapped++
             }
 }
 
 fun hash52(inp: Int): Int {
-    var inp = inp
-    inp = inp xor inp.ushr(15)
+    var inp1 = inp
+    inp1 = inp1 xor inp1.ushr(15)
 
-    inp *= -0x1121f76f // (2^4+1)*(2^7+1)*(2^17-1)
-    inp = inp xor inp.ushr(5)
-    inp += inp shl 16
-    inp = inp xor inp.ushr(7)
-    inp = inp xor inp.ushr(3)
-    inp = inp xor (inp shl 6)
-    inp = inp xor inp.ushr(17)
-    return inp
+    inp1 *= -0x1121f76f // (2^4+1)*(2^7+1)*(2^17-1)
+    inp1 = inp1 xor inp1.ushr(5)
+    inp1 += inp1 shl 16
+    inp1 = inp1 xor inp1.ushr(7)
+    inp1 = inp1 xor inp1.ushr(3)
+    inp1 = inp1 xor (inp1 shl 6)
+    inp1 = inp1 xor inp1.ushr(17)
+    return inp1
 }
 
 
 fun selectPartition(seed: Int, x: Int, y: Int, z: Int, partitionCount: Int, smallBlock: Boolean): Int {
-    var seed = seed
-    var x = x
-    var y = x
-    var z = x
+    var pSeed = seed
+    var x1 = x
+    var y1 = y
+    var z1 = z
     if (smallBlock) {
-        x = x shl 1
-        y = y shl 1
-        z = z shl 1
+        x1 = x1 shl 1
+        y1 = y1 shl 1
+        z1 = z1 shl 1
     }
 
-    seed += (partitionCount - 1) * 1024
+    pSeed += (partitionCount - 1) * 1024
 
-    val rnum = hash52(seed)
+    val rNum = hash52(pSeed)
 
-    var seed1 = (rnum and 0xF)
-    var seed2 = (rnum.ushr(4) and 0xF)
-    var seed3 = (rnum.ushr(8) and 0xF)
-    var seed4 = (rnum.ushr(12) and 0xF)
-    var seed5 = (rnum.ushr(16) and 0xF)
-    var seed6 = (rnum.ushr(20) and 0xF)
-    var seed7 = (rnum.ushr(24) and 0xF)
-    var seed8 = (rnum.ushr(28) and 0xF)
-    var seed9 = (rnum.ushr(18) and 0xF)
-    var seed10 = (rnum.ushr(22) and 0xF)
-    var seed11 = (rnum.ushr(26) and 0xF)
-    var seed12 = (rnum.ushr(30) or (rnum shl 2) and 0xF)
+    var seed1 = (rNum and 0xF)
+    var seed2 = (rNum.ushr(4) and 0xF)
+    var seed3 = (rNum.ushr(8) and 0xF)
+    var seed4 = (rNum.ushr(12) and 0xF)
+    var seed5 = (rNum.ushr(16) and 0xF)
+    var seed6 = (rNum.ushr(20) and 0xF)
+    var seed7 = (rNum.ushr(24) and 0xF)
+    var seed8 = (rNum.ushr(28) and 0xF)
+    var seed9 = (rNum.ushr(18) and 0xF)
+    var seed10 = (rNum.ushr(22) and 0xF)
+    var seed11 = (rNum.ushr(26) and 0xF)
+    var seed12 = (rNum.ushr(30) or (rNum shl 2) and 0xF)
 
     // squaring all the seeds in order to bias their distribution
     // towards lower values.
@@ -118,14 +148,14 @@ fun selectPartition(seed: Int, x: Int, y: Int, z: Int, partitionCount: Int, smal
     val sh1: Int
     val sh2: Int
     val sh3: Int
-    if ((seed and 1) != 0) {
-        sh1 = if ((seed and 2) != 0) 4 else 5
+    if ((pSeed and 1) != 0) {
+        sh1 = if ((pSeed and 2) != 0) 4 else 5
         sh2 = if (partitionCount == 3) 6 else 5
     } else {
         sh1 = if (partitionCount == 3) 6 else 5
-        sh2 = if ((seed and 2) != 0) 4 else 5
+        sh2 = if ((pSeed and 2) != 0) 4 else 5
     }
-    sh3 = if ((seed and 0x10) != 0) sh1 else sh2
+    sh3 = if ((pSeed and 0x10) != 0) sh1 else sh2
 
     seed1 = seed1 shr sh1
     seed2 = seed2 shr sh2
@@ -142,10 +172,10 @@ fun selectPartition(seed: Int, x: Int, y: Int, z: Int, partitionCount: Int, smal
     seed12 = seed12 shr sh3
 
 
-    var a = seed1 * x + seed2 * y + seed11 * z + (rnum shr 14)
-    var b = seed3 * x + seed4 * y + seed12 * z + (rnum shr 10)
-    var c = seed5 * x + seed6 * y + seed9 * z + (rnum shr 6)
-    var d = seed7 * x + seed8 * y + seed10 * z + (rnum shr 2)
+    var a = seed1 * x1 + seed2 * y1 + seed11 * z1 + (rNum shr 14)
+    var b = seed3 * x1 + seed4 * y1 + seed12 * z1 + (rNum shr 10)
+    var c = seed5 * x1 + seed6 * y1 + seed9 * z1 + (rNum shr 6)
+    var d = seed7 * x1 + seed8 * y1 + seed10 * z1 + (rNum shr 2)
 
 
     // apply the saw
@@ -184,7 +214,7 @@ fun generateOnePartitionTable(xDim: Int, yDim: Int, zDim: Int, partitionCount: I
         for(y in 0 until yDim)
             for(x in 0 until xDim) {
                 val part = selectPartition(partitionIndex, x, y, z, partitionCount, smallBlock)
-                partitionOfTexel[tempIdx] = part
+                partitionOfTexel[tempIdx] = part.toUByte()
                 tempIdx++
             }
 
@@ -193,12 +223,12 @@ fun generateOnePartitionTable(xDim: Int, yDim: Int, zDim: Int, partitionCount: I
     val counts = Array(4) {0}
 
     for (i in 0 until texelsPerBlock) {
-        val partition = pt.partitionOfTexel[i]
-        pt.texelsOfPartition[partition][counts[partition]++] = i
+        val partition = pt.partitionOfTexel[i].toInt()
+        pt.texelsOfPartition[partition][counts[partition]++] = i.toUByte()
     }
 
     for(i in 0 until 4)
-        pt.texelsPerPartition[i] = counts[i]
+        pt.texelsPerPartition[i] = counts[i].toUByte()
 
     when {
         counts[0] == 0 -> pt.partitionCount = 0
@@ -208,20 +238,20 @@ fun generateOnePartitionTable(xDim: Int, yDim: Int, zDim: Int, partitionCount: I
         else -> pt.partitionCount = 4
     }
 
-    val bsd = getBlockSizeDescriptor(xDim, yDim, zDim);
+    val bsd = getBlockSizeDescriptor(xDim, yDim, zDim)
     val texelsToProcess = bsd.texelcountForBitmapPartitioning
     for (i in 0 until texelsToProcess) {
         val idx = bsd.texelsForBitmapPartitioning[i]
-        pt.coverageBitmaps[pt.partitionOfTexel[idx]] = pt.coverageBitmaps[pt.partitionOfTexel[idx]] or (1 shl i).toULong()
+        pt.coverageBitmaps[pt.partitionOfTexel[idx].toInt()] = pt.coverageBitmaps[pt.partitionOfTexel[idx].toInt()] or (1 shl i).toULong()
     }
 
 }
 
 fun generatePartitionTables(xDim : Int, yDim : Int, zDim : Int) {
     val onePartition = arrayOf(PartitionInfo())
-    val twoPartitions = Array(1024) {PartitionInfo()}
-    val threePartitions = Array(1024) {PartitionInfo()}
-    val fourPartitions = Array(1024) {PartitionInfo()}
+    val twoPartitions = Array(1024) { PartitionInfo() }
+    val threePartitions = Array(1024) { PartitionInfo() }
+    val fourPartitions = Array(1024) { PartitionInfo() }
 
     val partitionTable : Array<Array<PartitionInfo>?> = arrayOf(null, onePartition, twoPartitions, threePartitions, fourPartitions)
 

@@ -1,4 +1,23 @@
-package com.fungames.kotlinASTC
+/*----------------------------------------------------------------------------*/
+/**
+ *	This confidential and proprietary software may be used only as
+ *	authorised by a licensing agreement from ARM Limited
+ *	(C) COPYRIGHT 2011-2012 ARM Limited
+ *	ALL RIGHTS RESERVED
+ *
+ *	The entire notice above must be reproduced on all authorised
+ *	copies and copies may only be made to the extent permitted
+ *	by a licensing agreement from ARM Limited.
+ *
+ *	@brief	For ASTC, generate the block size descriptor and the associated
+ *			decimation tables.
+ *	@author rewritten to Kotlin by FunGames
+ */
+/*----------------------------------------------------------------------------*/
+
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
+package me.fungames.kotlinASTC
 
 import kotlin.random.Random
 
@@ -58,44 +77,45 @@ fun get2dPercentileTable(blockDimX: Int, blockDimY: Int) : Array<Float> {
 }
 
 val dummyPercentileTable3d = Array(2048) {0.0f}
-fun get3dPercentileTable(blockDimX : Int, blockDimY : Int, blockDimZ : Int) = dummyPercentileTable3d
+fun get3dPercentileTable(@Suppress("UNUSED_PARAMETER") blockDimX : Int, @Suppress("UNUSED_PARAMETER") blockDimY : Int, @Suppress("UNUSED_PARAMETER") blockDimZ : Int) =
+    dummyPercentileTable3d
 
 fun decodeBlockMode2d(blockMode: Int) : Pair<Boolean, BlockModeDecodingResult> {
     val res = BlockModeDecodingResult()
 
     var baseQuantMode = blockMode shr 4 and 1
-    var H = blockMode shr 9 and 1
-    var D = blockMode shr 10 and 1
+    var h = blockMode shr 9 and 1
+    var d = blockMode shr 10 and 1
 
-    val A = blockMode shr 5 and 0x3
+    val a = blockMode shr 5 and 0x3
 
-    var N = 0
-    var M = 0
+    var n = 0
+    var m = 0
 
     if (blockMode and 3 != 0) {
         baseQuantMode = baseQuantMode or (blockMode and 3 shl 1)
-        var B = blockMode shr 7 and 3
+        var b = blockMode shr 7 and 3
         when (blockMode shr 2 and 3) {
             0 -> {
-                N = B + 4
-                M = A + 2
+                n = b + 4
+                m = a + 2
             }
             1 -> {
-                N = B + 8
-                M = A + 2
+                n = b + 8
+                m = a + 2
             }
             2 -> {
-                N = A + 2
-                M = B + 8
+                n = a + 2
+                m = b + 8
             }
             3 -> {
-                B = B and 1
+                b = b and 1
                 if ((blockMode and 0x100) != 0) {
-                    N = B + 2
-                    M = A + 2
+                    n = b + 2
+                    m = a + 2
                 } else {
-                    N = A + 2
-                    M = B + 6
+                    n = a + 2
+                    m = b + 6
                 }
             }
         }
@@ -103,47 +123,50 @@ fun decodeBlockMode2d(blockMode: Int) : Pair<Boolean, BlockModeDecodingResult> {
         baseQuantMode = baseQuantMode or (blockMode shr 2 and 3 shl 1)
         if (((blockMode shr 2) and 3) == 0)
             return Pair(false, res)
-        val B = blockMode shr 9 and 3
+        val b = blockMode shr 9 and 3
         when (blockMode shr 7 and 3) {
             0 -> {
-                N = 12
-                M = A + 2
+                n = 12
+                m = a + 2
             }
             1 -> {
-                N = A + 2
-                M = 12
+                n = a + 2
+                m = 12
             }
             2 -> {
-                N = A + 6
-                M = B + 6
-                D = 0
-                H = 0
+                n = a + 6
+                m = b + 6
+                d = 0
+                h = 0
             }
             3 -> when (blockMode shr 5 and 3) {
                 0 -> {
-                    N = 6
-                    M = 10
+                    n = 6
+                    m = 10
                 }
                 1 -> {
-                    N = 10
-                    M = 6
+                    n = 10
+                    m = 6
                 }
                 2, 3 -> return Pair(false, res)
             }
         }
     }
 
-    val weightCount = N * M * (D + 1)
-    val qmode = baseQuantMode - 2 + 6 * H
+    val weightCount = n * m * (d + 1)
+    val qmode = baseQuantMode - 2 + 6 * h
 
 
-    val weightbits = computeIseBitcount(weightCount, QuantizationMethod.getByValue(qmode))
+    val weightbits = computeIseBitcount(
+        weightCount,
+        QuantizationMethod.getByValue(qmode)
+    )
     if(weightCount > MAX_WEIGHTS_PER_BLOCK || weightbits < MIN_WEIGHT_BITS_PER_BLOCK)
         return Pair(false, res)
 
-    res.xWeights = N
-    res.yWeights = M
-    res.isDualPlane = D != 0
+    res.xWeights = n
+    res.yWeights = m
+    res.isDualPlane = d != 0
     res.quantizationMode = qmode
     return Pair(true, res)
 }
@@ -152,72 +175,73 @@ fun decodeBlockMode3d(blockMode : Int) : Pair<Boolean, BlockModeDecodingResult> 
     val res = BlockModeDecodingResult()
 
     var baseQuantMode = (blockMode shr 4) and 1
-    var H = (blockMode shr 9) and 1
-    var D = (blockMode shr 10) and 1
+    var h = (blockMode shr 9) and 1
+    var d = (blockMode shr 10) and 1
 
-    val A = (blockMode shr 5) and 0x3
+    val a = (blockMode shr 5) and 0x3
 
-    var N = 0; var M = 0; var Q = 0
+    var n = 0; var m = 0; var q = 0
 
     if((blockMode and 3) != 0) {
         baseQuantMode = baseQuantMode or ((blockMode and 3) shl 1)
-        val B = (blockMode shr 7) and 3
-        val C = (blockMode shr 2) and 0x3
-        N = A + 2
-        M = B + 2
-        Q = C + 2
+        val b = (blockMode shr 7) and 3
+        val c = (blockMode shr 2) and 0x3
+        n = a + 2
+        m = b + 2
+        q = c + 2
     } else {
         baseQuantMode = baseQuantMode or (((blockMode shr 2) and 3) shl 1)
-        if(((blockMode shr 2) and 3) == 0)
+        if (((blockMode shr 2) and 3) == 0)
             return Pair(false, res)
-        var B = (blockMode shr 9) and 3
-        if(((blockMode shr 7) and 3) != 3) {
-            D = 0
-            H = 0
+        val b = (blockMode shr 9) and 3
+        if (((blockMode shr 7) and 3) != 3) {
+            d = 0
+            h = 0
         }
-        when((blockMode shr 7) and 3) {
+        when ((blockMode shr 7) and 3) {
             0 -> {
-                N = 6
-                M = B + 2
-                Q = A + 2
+                n = 6
+                m = b + 2
+                q = a + 2
             }
             1 -> {
-                N = A + 2
-                M = 6
-                Q = B + 2
+                n = a + 2
+                m = 6
+                q = b + 2
             }
             2 -> {
-                N = A + 2
-                M = B + 2
-                Q = 6
+                n = a + 2
+                m = b + 2
+                q = 6
             }
             3 -> {
-                N = 2
-                M = 2
-                Q = 2
-                when((blockMode shr 5) and 3) {
-                    0 -> N = 6
-                    1 -> M = 6
-                    2 -> Q = 6
+                n = 2
+                m = 2
+                q = 2
+                when ((blockMode shr 5) and 3) {
+                    0 -> n = 6
+                    1 -> m = 6
+                    2 -> q = 6
                     3 -> return Pair(false, res)
                 }
             }
         }
-
-        val weightCount = N * M * Q * (D + 1)
-        val qMode = (baseQuantMode - 2) + 6 * H
-
-        val weightbits = computeIseBitcount(weightCount, QuantizationMethod.getByValue(qMode))
-        if (weightCount > MAX_WEIGHTS_PER_BLOCK || weightbits < MIN_WEIGHT_BITS_PER_BLOCK || weightbits > MAX_WEIGHT_BITS_PER_BLOCK)
-            return Pair(false, res)
-        res.xWeights = N
-        res.yWeights = M
-        res.zWeights = Q
-        res.isDualPlane = D != 0
-        res.quantizationMode  = qMode
-        return Pair(true, res)
     }
-    return Pair(false, res)
+    val weightCount = n * m * q * (d + 1)
+    val qMode = (baseQuantMode - 2) + 6 * h
+
+    val weightbits = computeIseBitcount(
+        weightCount,
+        QuantizationMethod.getByValue(qMode)
+    )
+    if (weightCount > MAX_WEIGHTS_PER_BLOCK || weightbits < MIN_WEIGHT_BITS_PER_BLOCK || weightbits > MAX_WEIGHT_BITS_PER_BLOCK)
+        return Pair(false, res)
+    res.xWeights = n
+    res.yWeights = m
+    res.zWeights = q
+    res.isDualPlane = d != 0
+    res.quantizationMode  = qMode
+    return Pair(true, res)
 }
 
 data class BlockModeDecodingResult(
@@ -229,18 +253,19 @@ fun initializeDecimationTable2d(
     // dimensions of the block
     xDim: Int, yDim: Int,
     // number of grid points in 2d weight grid
-    xWeights : Int, yWeights : Int, dt : DecimationTable) {
+    xWeights : Int, yWeights : Int, dt : DecimationTable
+) {
 
     val texelsPerBlock = xDim * yDim
     val weightsPerBlock = xWeights * yWeights
 
-    val weightcountOfTexel = Array(MAX_TEXELS_PER_BLOCK) {0}
-    val gridWeightsOfTexel = Array(MAX_TEXELS_PER_BLOCK) {Array(4) {0} }
-    val weightsOfTexel = Array(MAX_TEXELS_PER_BLOCK) {Array(4) {0} }
+    val weightcountOfTexel = IntArray(MAX_TEXELS_PER_BLOCK)
+    val gridWeightsOfTexel = Array(MAX_TEXELS_PER_BLOCK) {IntArray(4) }
+    val weightsOfTexel = Array(MAX_TEXELS_PER_BLOCK) {IntArray(4) }
 
-    val texelcountOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {0}
-    val texelsOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {Array(MAX_TEXELS_PER_BLOCK) {0}}
-    val texelWeightsOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {Array(MAX_TEXELS_PER_BLOCK) {0}}
+    val texelcountOfWeight = IntArray(MAX_WEIGHTS_PER_BLOCK)
+    val texelsOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {IntArray(MAX_TEXELS_PER_BLOCK)}
+    val texelWeightsOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {IntArray(MAX_TEXELS_PER_BLOCK)}
 
     // Not needed because arrays where initialized with 0
     //    for (i = 0; i < weights_per_block; i++)
@@ -286,21 +311,21 @@ fun initializeDecimationTable2d(
         }
 
     for (i in 0 until texelsPerBlock) {
-        dt.texelNumWeights[i] = weightcountOfTexel[i]
+        dt.texelNumWeights[i] = weightcountOfTexel[i].toUByte()
 
         for (j in 0 until weightcountOfTexel[i]) {
-            dt.texelWeightsInt[i][j] = weightsOfTexel[i][j]
+            dt.texelWeightsInt[i][j] = weightsOfTexel[i][j].toUByte()
             dt.texelWeightsFloat[i][j] = (weightsOfTexel[i][j]) * (1.0f / TEXEL_WEIGHT_SUM)
-            dt.texelWeights[i][j] = gridWeightsOfTexel[i][j]
+            dt.texelWeights[i][j] = gridWeightsOfTexel[i][j].toUByte()
         }
     }
 
     for(i in 0 until weightsPerBlock) {
-        dt.weightNumTexels[i] = texelcountOfWeight[i]
+        dt.weightNumTexels[i] = texelcountOfWeight[i].toUByte()
 
         for (j in 0 until texelcountOfWeight[i]) {
-            dt.weightTexel[i][j] = texelsOfWeight[i][j]
-            dt.weightsInt[i][j] = texelWeightsOfWeight[i][j]
+            dt.weightTexel[i][j] = texelsOfWeight[i][j].toUByte()
+            dt.weightsInt[i][j] = texelWeightsOfWeight[i][j].toUByte()
             dt.weightsFlt[i][j] = texelWeightsOfWeight[i][j].toFloat()
         }
     }
@@ -313,18 +338,19 @@ fun initializeDecimationTable3d(
     // dimensions of the block
     xDim: Int, yDim: Int, zDim: Int,
     // number of grid points in 3d weight grid
-    xWeights : Int, yWeights : Int, zWeights : Int, dt : DecimationTable) {
+    xWeights : Int, yWeights : Int, zWeights : Int, dt : DecimationTable
+) {
 
     val texelsPerBlock = xDim * yDim * zDim
     val weightsPerBlock = xWeights * yWeights * zWeights
 
-    val weightcountOfTexel = Array(MAX_TEXELS_PER_BLOCK) {0}
-    val gridWeightsOfTexel = Array(MAX_TEXELS_PER_BLOCK) {Array(4) {0}}
-    val weightsOfTexel = Array(MAX_TEXELS_PER_BLOCK) {Array(4) {0}}
+    val weightcountOfTexel = IntArray(MAX_TEXELS_PER_BLOCK)
+    val gridWeightsOfTexel = Array(MAX_TEXELS_PER_BLOCK) {IntArray(4)}
+    val weightsOfTexel = Array(MAX_TEXELS_PER_BLOCK) {IntArray(4)}
 
-    val texelcountOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {0}
-    val texelsOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {Array(MAX_TEXELS_PER_BLOCK) {0}}
-    val texelWeightsOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {Array(MAX_TEXELS_PER_BLOCK) {0}}
+    val texelcountOfWeight = IntArray(MAX_WEIGHTS_PER_BLOCK)
+    val texelsOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {IntArray(MAX_TEXELS_PER_BLOCK)}
+    val texelWeightsOfWeight = Array(MAX_WEIGHTS_PER_BLOCK) {IntArray(MAX_TEXELS_PER_BLOCK)}
 
     // Not needed because arrays where initialized with 0
     //    for (i = 0; i < weights_per_block; i++)
@@ -352,73 +378,67 @@ fun initializeDecimationTable3d(
                 qWeight[0] = (zWeightInt * yWeights + yWeightInt) * xWeights + xWeightInt
                 qWeight[3] = ((zWeightInt + 1) * yWeights + (yWeightInt + 1)) * xWeights + (xWeightInt + 1)
 
-                // simplex interpolation
-                val fs = xWeightFrac
-                val ft = yWeightFrac
-                val fp = zWeightFrac
-
-                //TODO int cas = ((fs > ft) << 2) + ((ft > fp) << 1) + ((fs > fp)); Original, Check
-                val cas = (if(fs > ft) 1 else 0 shl 2) + (if(ft > fp) 1 else 0 shl 1) + (if(fs > fp) 1 else 0)
-                val N = xWeights
-                val NM = xWeights * yWeights
+                //int cas = ((fs > ft) << 2) + ((ft > fp) << 1) + ((fs > fp)); Original
+                val cas = (if(xWeightFrac > yWeightFrac) 1 else 0 shl 2) + (if(yWeightFrac > zWeightFrac) 1 else 0 shl 1) + (if(xWeightFrac > zWeightFrac) 1 else 0)
+                val nm = xWeights * yWeights
 
                 val s1 : Int; val s2 : Int; val w0 : Int; val w1 : Int; val w2 : Int; val w3 : Int
                 when(cas) {
                     7 -> {
                         s1 = 1
-                        s2 = N
-                        w0 = 16 - fs
-                        w1 = fs - ft
-                        w2 = ft - fp
-                        w3 = fp
+                        s2 = xWeights
+                        w0 = 16 - xWeightFrac
+                        w1 = xWeightFrac - yWeightFrac
+                        w2 = yWeightFrac - zWeightFrac
+                        w3 = zWeightFrac
                     }
                     3 -> {
                         s1 = 1
-                        s2 = N
-                        w0 = 16 - fs
-                        w1 = fs - ft
-                        w2 = ft - fp
-                        w3 = fp
+                        s2 = xWeights
+                        w0 = 16 - xWeightFrac
+                        w1 = xWeightFrac - yWeightFrac
+                        w2 = yWeightFrac - zWeightFrac
+                        w3 = zWeightFrac
                     }
                     5 -> {
                         s1 = 1
-                        s2 = NM
-                        w0 = 16 - fs
-                        w1 = fs - fp
-                        w2 = fp - ft
-                        w3 = ft
+                        s2 = nm
+                        w0 = 16 - xWeightFrac
+                        w1 = xWeightFrac - zWeightFrac
+                        w2 = zWeightFrac - yWeightFrac
+                        w3 = yWeightFrac
                     }
                     4 -> {
-                        s1 = NM
+                        s1 = nm
                         s2 = 1
-                        w0 = 16 - fp
-                        w1 = fp - fs
-                        w2 = fs - ft
-                        w3 = ft
+                        w0 = 16 - zWeightFrac
+                        w1 = zWeightFrac - xWeightFrac
+                        w2 = xWeightFrac - yWeightFrac
+                        w3 = yWeightFrac
                     }
                     2 -> {
-                        s1 = N
-                        s2 = NM
-                        w0 = 16 - ft
-                        w1 = ft - fp
-                        w2 = fp - fs
-                        w3 = fs
+                        s1 = xWeights
+                        s2 = nm
+                        w0 = 16 - yWeightFrac
+                        w1 = yWeightFrac - zWeightFrac
+                        w2 = zWeightFrac - xWeightFrac
+                        w3 = xWeightFrac
                     }
                     0 -> {
-                        s1 = NM
-                        s2 = N
-                        w0 = 16 - fp
-                        w1 = fp - ft
-                        w2 = ft - fs
-                        w3 = fs
+                        s1 = nm
+                        s2 = xWeights
+                        w0 = 16 - zWeightFrac
+                        w1 = zWeightFrac - yWeightFrac
+                        w2 = yWeightFrac - xWeightFrac
+                        w3 = xWeightFrac
                     }
                     else -> {
-                        s1 = NM
-                        s2 = N
-                        w0 = 16 - fp
-                        w1 = fp - ft
-                        w2 = ft - fs
-                        w3 = fs
+                        s1 = nm
+                        s2 = xWeights
+                        w0 = 16 - zWeightFrac
+                        w1 = zWeightFrac - yWeightFrac
+                        w2 = yWeightFrac - xWeightFrac
+                        w3 = xWeightFrac
                     }
                 }
 
@@ -441,20 +461,20 @@ fun initializeDecimationTable3d(
             }
 
     for(i in 0 until texelsPerBlock) {
-        dt.texelNumWeights[i] = weightcountOfTexel[i]
+        dt.texelNumWeights[i] = weightcountOfTexel[i].toUByte()
 
         for(j in 0 until weightcountOfTexel[i]) {
-            dt.texelWeightsInt[i][j] = weightsOfTexel[i][j]
+            dt.texelWeightsInt[i][j] = weightsOfTexel[i][j].toUByte()
             dt.texelWeightsFloat[i][j] = weightsOfTexel[i][j] * (1.0f / TEXEL_WEIGHT_SUM)
-            dt.texelWeights[i][j] = gridWeightsOfTexel[i][j]
+            dt.texelWeights[i][j] = gridWeightsOfTexel[i][j].toUByte()
         }
     }
 
     for(i in 0 until weightsPerBlock) {
-        dt.weightNumTexels[i] = texelcountOfWeight[i]
+        dt.weightNumTexels[i] = texelcountOfWeight[i].toUByte()
         for(j in 0 until texelcountOfWeight[i]) {
-            dt.weightTexel[i][j] = texelsOfWeight[i][j]
-            dt.weightsInt[i][j] = texelWeightsOfWeight[i][j]
+            dt.weightTexel[i][j] = texelsOfWeight[i][j].toUByte()
+            dt.weightsInt[i][j] = texelWeightsOfWeight[i][j].toUByte()
             dt.weightsFlt[i][j] = texelWeightsOfWeight[i][j].toFloat()
         }
     }
@@ -479,7 +499,7 @@ fun getBlockSizeDescriptor(xDim: Int, yDim: Int, zDim: Int) : BlockSizeDescripto
 }
 
 fun constructBlockSizeDescriptor2d(xDim: Int, yDim: Int, bsd : BlockSizeDescriptor) {
-    val decimationModeIndex = Array(256) { -1 }    // for each of the 256 entries in the decim_table_array, its index
+    val decimationModeIndex = IntArray(256) { -1 }    // for each of the 256 entries in the decim_table_array, its index
     var decimationModeCount = 0
 
     // gather all the infill-modes that can be used with the current block size
@@ -496,8 +516,14 @@ fun constructBlockSizeDescriptor2d(xDim: Int, yDim: Int, bsd : BlockSizeDescript
             var maxprec1Plane = -1
             var maxprec2Planes = -1
             for(i in 0 until 12) {
-                val bits1Plane = computeIseBitcount(weightCount, QuantizationMethod.getByValue(i))
-                val bits2Plane = computeIseBitcount(2 * weightCount, QuantizationMethod.getByValue(i))
+                val bits1Plane = computeIseBitcount(
+                    weightCount,
+                    QuantizationMethod.getByValue(i)
+                )
+                val bits2Plane = computeIseBitcount(
+                    2 * weightCount,
+                    QuantizationMethod.getByValue(i)
+                )
                 if (bits1Plane in MIN_WEIGHT_BITS_PER_BLOCK..MAX_WEIGHT_BITS_PER_BLOCK)
                     maxprec1Plane = i
                 if (bits2Plane in MIN_WEIGHT_BITS_PER_BLOCK..MAX_WEIGHT_BITS_PER_BLOCK)
@@ -559,8 +585,8 @@ fun constructBlockSizeDescriptor2d(xDim: Int, yDim: Int, bsd : BlockSizeDescript
             bsd.blockModes[i].percentile = 1.0f
         } else {
             val decimationMode = decimationModeIndex[yWeights * 16 + xWeights]
-            bsd.blockModes[i].decimationMode = decimationMode
-            bsd.blockModes[i].quantizationMode = quantizationMode
+            bsd.blockModes[i].decimationMode = decimationMode.toByte()
+            bsd.blockModes[i].quantizationMode = quantizationMode.toByte()
             bsd.blockModes[i].isDualPlane = isDualPlane
             bsd.blockModes[i].permitEncode = permitEncode
             bsd.blockModes[i].permitDecode = permitEncode 	// disallow decode of grid size larger than block size.
@@ -579,7 +605,7 @@ fun constructBlockSizeDescriptor2d(xDim: Int, yDim: Int, bsd : BlockSizeDescript
 
     else {
         // pick 64 random texels for use with bitmap partitioning.
-        val arr = Array(MAX_TEXELS_PER_BLOCK) {0}
+        val arr = IntArray(MAX_TEXELS_PER_BLOCK)
         //Useless when initializing with 0
         //for(i in 0 until xDim * yDim * zDim)
         //   arr[i] = 0
@@ -604,7 +630,7 @@ fun constructBlockSizeDescriptor2d(xDim: Int, yDim: Int, bsd : BlockSizeDescript
 }
 
 fun constructBlockSizeDescriptor3d(xDim: Int, yDim: Int, zDim: Int, bsd : BlockSizeDescriptor) {
-    val decimationModeIndex = Array(512) { -1 }    // for each of the 512 entries in the decim_table_array, its index
+    val decimationModeIndex = IntArray(512) { -1 }    // for each of the 512 entries in the decim_table_array, its index
     var decimationModeCount = 0
 
     // gather all the infill-modes that can be used with the current block size
@@ -622,8 +648,14 @@ fun constructBlockSizeDescriptor3d(xDim: Int, yDim: Int, zDim: Int, bsd : BlockS
                 var maxprec1Plane = -1
                 var maxprec2Planes = -1
                 for (i in 0 until 12) {
-                    val bits1Plane = computeIseBitcount(weightCount, QuantizationMethod.getByValue(i))
-                    val bits2Planes = computeIseBitcount(2 * weightCount, QuantizationMethod.getByValue(i))
+                    val bits1Plane = computeIseBitcount(
+                        weightCount,
+                        QuantizationMethod.getByValue(i)
+                    )
+                    val bits2Planes = computeIseBitcount(
+                        2 * weightCount,
+                        QuantizationMethod.getByValue(i)
+                    )
                     if (bits1Plane in MIN_WEIGHT_BITS_PER_BLOCK..MAX_WEIGHT_BITS_PER_BLOCK)
                         maxprec1Plane = i
                     if (bits2Planes in MIN_WEIGHT_BITS_PER_BLOCK..MAX_WEIGHT_BITS_PER_BLOCK)
@@ -681,8 +713,8 @@ fun constructBlockSizeDescriptor3d(xDim: Int, yDim: Int, zDim: Int, bsd : BlockS
             bsd.blockModes[i].percentile = 1.0f
         } else {
             val decimationMode = decimationModeIndex[zWeights * 64 + yWeights * 8 + xWeights]
-            bsd.blockModes[i].decimationMode = decimationMode
-            bsd.blockModes[i].quantizationMode = quantizationMode
+            bsd.blockModes[i].decimationMode = decimationMode.toByte()
+            bsd.blockModes[i].quantizationMode = quantizationMode.toByte()
             bsd.blockModes[i].isDualPlane = isDualPlane
             bsd.blockModes[i].permitEncode = permitEncode
             bsd.blockModes[i].permitDecode = permitEncode
@@ -700,7 +732,7 @@ fun constructBlockSizeDescriptor3d(xDim: Int, yDim: Int, zDim: Int, bsd : BlockS
             bsd.texelsForBitmapPartitioning[i] = i
     } else {
         // pick 64 random texels for use with bitmap partitioning.
-        val arr = Array(MAX_TEXELS_PER_BLOCK) {0}
+        val arr = IntArray(MAX_TEXELS_PER_BLOCK)
         //Useless when initializing with 0
         //for(i in 0 until xDim * yDim * zDim)
         //   arr[i] = 0

@@ -1,4 +1,4 @@
-package com.fungames.kotlinASTC
+package me.fungames.kotlinASTC
 
 var rgbForceUseOfHdr = false
 var alphaForceUseOfHdr = false

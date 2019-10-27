@@ -1,27 +1,34 @@
-package com.fungames.kotlinASTC
+/*----------------------------------------------------------------------------*/
+/**
+ *	This confidential and proprietary software may be used only as
+ *	authorised by a licensing agreement from ARM Limited
+ *	(C) COPYRIGHT 2011-2012 ARM Limited
+ *	ALL RIGHTS RESERVED
+ *
+ *	The entire notice above must be reproduced on all authorised
+ *	copies and copies may only be made to the extent permitted
+ *	by a licensing agreement from ARM Limited.
+ *
+ *	@brief	Color unquantization functions for ASTC.
+ *	@author rewritten to Kotlin by FunGames
+ */
+/*----------------------------------------------------------------------------*/
 
-import jdk.nashorn.tools.ShellFunctions.input
-import jdk.nashorn.tools.ShellFunctions.input
-import jdk.nashorn.tools.ShellFunctions.input
-
-
-
-
-
-
+@file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_UNSIGNED_LITERALS")
+package me.fungames.kotlinASTC
 
 
 data class UnpackColorEndpointsResult(
-    val colorEndpoint0 : Vector4,
-    val colorEndpoint1 : Vector4,
+    val colorEndpoint0 : UShort4,
+    val colorEndpoint1 : UShort4,
     val rgbHdrEndpoint : Boolean,
     val alphaHdrEndpoint : Boolean,
     val nanEndpoint : Boolean
 )
 
-fun unpackColorEndpoints(decodeMode: ASTC_DecodeMode, format : Int, quantizationLevel: Int, input : Array<Int>) : UnpackColorEndpointsResult {
-    var output0 = Vector4(0, 0, 0, 0)
-    var output1 = Vector4(0, 0, 0, 0)
+fun unpackColorEndpoints(decodeMode: AstcDecodeMode, format : Int, quantizationLevel: Int, input : IntArray) : UnpackColorEndpointsResult {
+    val output0 = UShort4(0u, 0u, 0u, 0u)
+    val output1 = UShort4(0u, 0u, 0u, 0u)
     var rgbHdr = 0
     var alphaHdr = 0
     var nanEndpoint = 0
@@ -111,94 +118,100 @@ fun unpackColorEndpoints(decodeMode: ASTC_DecodeMode, format : Int, quantization
 
     if (alphaHdr == -1) {
         if(alphaForceUseOfHdr) {
-            output0.w = 0x7800
-            output1.w = 0x7800
+            output0.w = 0x7800u
+            output1.w = 0x7800u
             alphaHdr = 1
         } else {
-            output0.w = 0x00FF
-            output1.w = 0x00FF
+            output0.w = 0x00FFu
+            output1.w = 0x00FFu
             alphaHdr = 0
         }
     }
 
     when(decodeMode) {
-        ASTC_DecodeMode.DECODE_LDR_SRGB -> {
+        AstcDecodeMode.DECODE_LDR_SRGB -> {
             if (rgbHdr == 1) {
-                output0.x = 0xFF00
-                output0.y = 0x0000
-                output0.z = 0xFF00
-                output0.w = 0xFF00
-                output1.x = 0xFF00
-                output1.y = 0x0000
-                output1.z = 0xFF00
-                output1.w = 0xFF00
+                output0.x = 0xFF00u
+                output0.y = 0x0000u
+                output0.z = 0xFF00u
+                output0.w = 0xFF00u
+                output1.x = 0xFF00u
+                output1.y = 0x0000u
+                output1.z = 0xFF00u
+                output1.w = 0xFF00u
             } else {
-                output0.x *= 257
-                output0.y *= 257
-                output0.z *= 257
-                output0.w *= 257
-                output1.x *= 257
-                output1.y *= 257
-                output1.z *= 257
-                output1.w *= 257
+                output0.x = (output0.x * 257u).toUShort()
+                output0.y = (output0.y * 257u).toUShort()
+                output0.z = (output0.z * 257u).toUShort()
+                output0.w = (output0.w * 257u).toUShort()
+                output1.x = (output1.x * 257u).toUShort()
+                output1.y = (output1.y * 257u).toUShort()
+                output1.z = (output1.z * 257u).toUShort()
+                output1.w = (output1.w * 257u).toUShort()
             }
             rgbHdr = 0
             alphaHdr = 0
         }
-        ASTC_DecodeMode.DECODE_LDR -> {
+        AstcDecodeMode.DECODE_LDR -> {
             if (rgbHdr == 1) {
-                output0.x = 0xFFFF
-                output0.y = 0xFFFF
-                output0.z = 0xFFFF
-                output0.w = 0xFFFF
-                output1.x = 0xFFFF
-                output1.y = 0xFFFF
-                output1.z = 0xFFFF
-                output1.w = 0xFFFF
+                output0.x = 0xFFFFu
+                output0.y = 0xFFFFu
+                output0.z = 0xFFFFu
+                output0.w = 0xFFFFu
+                output1.x = 0xFFFFu
+                output1.y = 0xFFFFu
+                output1.z = 0xFFFFu
+                output1.w = 0xFFFFu
                 nanEndpoint = 1
             } else {
-                output0.x *= 257
-                output0.y *= 257
-                output0.z *= 257
-                output0.w *= 257
-                output1.x *= 257
-                output1.y *= 257
-                output1.z *= 257
-                output1.w *= 257
+                output0.x = (output0.x * 257u).toUShort()
+                output0.y = (output0.y * 257u).toUShort()
+                output0.z = (output0.z * 257u).toUShort()
+                output0.w = (output0.w * 257u).toUShort()
+                output1.x = (output1.x * 257u).toUShort()
+                output1.y = (output1.y * 257u).toUShort()
+                output1.z = (output1.z * 257u).toUShort()
+                output1.w = (output1.w * 257u).toUShort()
             }
             rgbHdr = 0
             alphaHdr = 0
         }
-        ASTC_DecodeMode.DECODE_HDR -> {
+        AstcDecodeMode.DECODE_HDR -> {
             if (rgbHdr == 0)
             {
-                output0.x *= 257
-                output0.y *= 257
-                output0.z *= 257
-                output1.x *= 257
-                output1.y *= 257
-                output1.z *= 257
+                output0.x = (output0.x * 257u).toUShort()
+                output0.y = (output0.y * 257u).toUShort()
+                output0.z = (output0.z * 257u).toUShort()
+                output1.x = (output1.x * 257u).toUShort()
+                output1.y = (output1.y * 257u).toUShort()
+                output1.z = (output1.z * 257u).toUShort()
             }
             if (alphaHdr == 0)
             {
-                output0.w *= 257
-                output1.w *= 257
+                output0.w = (output0.w * 257u).toUShort()
+                output1.w = (output1.w * 257u).toUShort()
             }
         }
     }
 
-    return UnpackColorEndpointsResult(output0, output1, rgbHdr != 0, alphaHdr != 0, nanEndpoint != 0)
+    return UnpackColorEndpointsResult(
+        output0,
+        output1,
+        rgbHdr != 0,
+        alphaHdr != 0,
+        nanEndpoint != 0
+    )
 }
 
-fun rgbDeltaUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) : Int {
+fun rgbDeltaUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) : Int {
     // unquantize the color endpoints
-    var r0 = colorUnquantizationTables[quantizationLevel][input[0]]
-    var g0 = colorUnquantizationTables[quantizationLevel][input[2]]
-    var b0 = colorUnquantizationTables[quantizationLevel][input[4]]
+    var r0 = colorUnquantizationTables[quantizationLevel][input[0]].toInt()
+    var g0 = colorUnquantizationTables[quantizationLevel][input[2]].toInt()
+    var b0 = colorUnquantizationTables[quantizationLevel][input[4]].toInt()
 
-    var r1 = colorUnquantizationTables[quantizationLevel][input[1]]
-    var g1 = colorUnquantizationTables[quantizationLevel][input[3]]
-    var b1 = colorUnquantizationTables[quantizationLevel][input[5]]
+    var r1 = colorUnquantizationTables[quantizationLevel][input[1]].toInt()
+    var g1 = colorUnquantizationTables[quantizationLevel][input[3]].toInt()
+    var b1 = colorUnquantizationTables[quantizationLevel][input[5]].toInt()
 
     // perform the bit-transfer procedure
     r0 = r0 or (r1 and 0x80 shl 1)
@@ -289,52 +302,52 @@ fun rgbDeltaUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, 
     else if (b1e > 255)
         b1e = 255
 
-    output0.setValues(r0e, g0e, b0e, 0xFF)
-    output1.setValues(r1e, g1e, b1e, 0xFF)
+    output0.setValues(r0e.toUShort(), g0e.toUShort(), b0e.toUShort(), 255u)
+    output1.setValues(r1e.toUShort(), g1e.toUShort(), b1e.toUShort(), 255u)
 
     return retval
 }
 
-fun rgbUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) : Int {
-    var ri0b = colorUnquantizationTables[quantizationLevel][input[0]]
-    var ri1b = colorUnquantizationTables[quantizationLevel][input[1]]
-    var gi0b = colorUnquantizationTables[quantizationLevel][input[2]]
-    var gi1b = colorUnquantizationTables[quantizationLevel][input[3]]
-    val bi0b = colorUnquantizationTables[quantizationLevel][input[4]]
-    val bi1b = colorUnquantizationTables[quantizationLevel][input[5]]
+fun rgbUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) : Int {
+    var ri0b = colorUnquantizationTables[quantizationLevel][input[0]].toInt()
+    var ri1b = colorUnquantizationTables[quantizationLevel][input[1]].toInt()
+    var gi0b = colorUnquantizationTables[quantizationLevel][input[2]].toInt()
+    var gi1b = colorUnquantizationTables[quantizationLevel][input[3]].toInt()
+    val bi0b = colorUnquantizationTables[quantizationLevel][input[4]].toInt()
+    val bi1b = colorUnquantizationTables[quantizationLevel][input[5]].toInt()
 
-    if (ri0b + gi0b + bi0b > ri1b + gi1b + bi1b) {
+    return if (ri0b + gi0b + bi0b > ri1b + gi1b + bi1b) {
         // blue-contraction
         ri0b = ri0b + bi0b shr 1
         gi0b = gi0b + bi0b shr 1
         ri1b = ri1b + bi1b shr 1
         gi1b = gi1b + bi1b shr 1
 
-        output0.setValues(ri1b, gi1b, bi1b, 255)
-        output1.setValues(ri0b, gi0b, bi0b, 255)
-        return 1
+        output0.setValues(ri1b.toUShort(), gi1b.toUShort(), bi1b.toUShort(), 255u)
+        output1.setValues(ri0b.toUShort(), gi0b.toUShort(), bi0b.toUShort(), 255u)
+        1
     } else {
-        output0.setValues(ri0b, gi0b, bi0b, 255)
-        output1.setValues(ri1b, gi1b, bi1b, 255)
-        return 0
+        output0.setValues(ri0b.toUShort(), gi0b.toUShort(), bi0b.toUShort(), 255u)
+        output1.setValues(ri1b.toUShort(), gi1b.toUShort(), bi1b.toUShort(), 255u)
+        0
     }
 
 }
 
-fun rgbaUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
+fun rgbaUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
     val order = rgbUnpack(input, quantizationLevel, output0, output1)
     if (order == 0) {
-        output0.w = colorUnquantizationTables[quantizationLevel][input[6]]
-        output1.w = colorUnquantizationTables[quantizationLevel][input[7]]
+        output0.w = colorUnquantizationTables[quantizationLevel][input[6]].toUShort()
+        output1.w = colorUnquantizationTables[quantizationLevel][input[7]].toUShort()
     } else {
-        output0.w = colorUnquantizationTables[quantizationLevel][input[7]]
-        output1.w = colorUnquantizationTables[quantizationLevel][input[6]]
+        output0.w = colorUnquantizationTables[quantizationLevel][input[7]].toUShort()
+        output1.w = colorUnquantizationTables[quantizationLevel][input[6]].toUShort()
     }
 }
 
-fun rgbaDeltaUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    var a0 = colorUnquantizationTables[quantizationLevel][input[6]]
-    var a1 = colorUnquantizationTables[quantizationLevel][input[7]]
+fun rgbaDeltaUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    var a0 = colorUnquantizationTables[quantizationLevel][input[6]].toInt()
+    var a1 = colorUnquantizationTables[quantizationLevel][input[7]].toInt()
     a0 = a0 or (a1 and 0x80 shl 1)
     a1 = a1 and 0x7F
     if ((a1 and 0x40) != 0)
@@ -349,64 +362,65 @@ fun rgbaDeltaUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4,
         a1 = 255
     val order = rgbDeltaUnpack(input, quantizationLevel, output0, output1)
     if (order == 0) {
-        output0.w = a0
-        output1.w = a1
+        output0.w = a0.toUShort()
+        output1.w = a1.toUShort()
     } else {
-        output0.w = a1
-        output1.w = a0
+        output0.w = a1.toUShort()
+        output1.w = a0.toUShort()
     }
 }
 
-fun rgbScaleUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    val ir = colorUnquantizationTables[quantizationLevel][input[0]]
-    val ig = colorUnquantizationTables[quantizationLevel][input[1]]
-    val ib = colorUnquantizationTables[quantizationLevel][input[2]]
+fun rgbScaleUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    val ir = colorUnquantizationTables[quantizationLevel][input[0]].toInt()
+    val ig = colorUnquantizationTables[quantizationLevel][input[1]].toInt()
+    val ib = colorUnquantizationTables[quantizationLevel][input[2]].toInt()
 
-    val iscale = colorUnquantizationTables[quantizationLevel][input[3]]
-    output1.setValues(ir, ig, ib, 255)
-    output0.setValues((ir * iscale) shr 8, (ig * iscale) shr 8, (ib * iscale) shr 8, 255)
+    val iscale = colorUnquantizationTables[quantizationLevel][input[3]].toInt()
+    output1.setValues(ir.toUShort(), ig.toUShort(), ib.toUShort(), 255u)
+    output0.setValues(((ir * iscale) shr 8).toUShort(), ((ig * iscale) shr 8).toUShort(),
+        ((ib * iscale) shr 8).toUShort(), 255u)
 }
 
-fun rgbScaleAlphaUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
+fun rgbScaleAlphaUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
     rgbScaleUnpack(input, quantizationLevel, output0, output1)
-    output0.w = colorUnquantizationTables[quantizationLevel][input[4]]
-    output1.w = colorUnquantizationTables[quantizationLevel][input[5]]
+    output0.w = colorUnquantizationTables[quantizationLevel][input[4]].toUShort()
+    output1.w = colorUnquantizationTables[quantizationLevel][input[5]].toUShort()
 }
 
-fun luminanceUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    val lum0 = colorUnquantizationTables[quantizationLevel][input[0]]
-    val lum1 = colorUnquantizationTables[quantizationLevel][input[1]]
-    output0.setValues(lum0, lum0, lum0, 255)
-    output1.setValues(lum1, lum1, lum1, 255)
+fun luminanceUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    val lum0 = colorUnquantizationTables[quantizationLevel][input[0]].toUShort()
+    val lum1 = colorUnquantizationTables[quantizationLevel][input[1]].toUShort()
+    output0.setValues(lum0, lum0, lum0, 255u)
+    output1.setValues(lum1, lum1, lum1, 255u)
 }
 
-fun luminanceDeltaUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    val v0 = colorUnquantizationTables[quantizationLevel][input[0]]
-    val v1 = colorUnquantizationTables[quantizationLevel][input[1]]
+fun luminanceDeltaUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    val v0 = colorUnquantizationTables[quantizationLevel][input[0]].toInt()
+    val v1 = colorUnquantizationTables[quantizationLevel][input[1]].toInt()
     val l0 = (v0 shr 2) or (v1 and 0xC0)
     var l1 = l0 + (v1 and 0x3F)
 
     if (l1 > 255)
         l1 = 255
 
-    output0.setValues(v0, v0, v0, 255)
-    output1.setValues(l1, l1, l1, 255)
+    output0.setValues(v0.toUShort(), v0.toUShort(), v0.toUShort(), 255u)
+    output1.setValues(l1.toUShort(), l1.toUShort(), l1.toUShort(), 255u)
 }
 
-fun luminanceAlphaUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    val lum0 = colorUnquantizationTables[quantizationLevel][input[0]]
-    val lum1 = colorUnquantizationTables[quantizationLevel][input[1]]
-    val alpha0 = colorUnquantizationTables[quantizationLevel][input[2]]
-    val alpha1 = colorUnquantizationTables[quantizationLevel][input[3]]
+fun luminanceAlphaUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    val lum0 = colorUnquantizationTables[quantizationLevel][input[0]].toUShort()
+    val lum1 = colorUnquantizationTables[quantizationLevel][input[1]].toUShort()
+    val alpha0 = colorUnquantizationTables[quantizationLevel][input[2]].toUShort()
+    val alpha1 = colorUnquantizationTables[quantizationLevel][input[3]].toUShort()
     output0.setValues(lum0, lum0, lum0, alpha0)
     output1.setValues(lum1, lum1, lum1, alpha1)
 }
 
-fun luminanceAlphaDeltaUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    var lum0 = colorUnquantizationTables[quantizationLevel][input[0]]
-    var lum1 = colorUnquantizationTables[quantizationLevel][input[1]]
-    var alpha0 = colorUnquantizationTables[quantizationLevel][input[2]]
-    var alpha1 = colorUnquantizationTables[quantizationLevel][input[3]]
+fun luminanceAlphaDeltaUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    var lum0 = colorUnquantizationTables[quantizationLevel][input[0]].toInt()
+    var lum1 = colorUnquantizationTables[quantizationLevel][input[1]].toInt()
+    var alpha0 = colorUnquantizationTables[quantizationLevel][input[2]].toInt()
+    var alpha1 = colorUnquantizationTables[quantizationLevel][input[3]].toInt()
 
     lum0 = lum0 or (lum1 and 0x80 shl 1)
     alpha0 = alpha0 or (alpha1 and 0x80 shl 1)
@@ -434,30 +448,34 @@ fun luminanceAlphaDeltaUnpack(input: Array<Int>, quantizationLevel: Int, output0
     else if (alpha1 > 255)
         alpha1 = 255
 
-    output0.setValues(lum0, lum0, lum0, alpha0)
-    output1.setValues(lum1, lum1, lum1, alpha1)
+    output0.setValues(lum0.toUShort(), lum0.toUShort(), lum0.toUShort(), alpha0.toUShort())
+    output1.setValues(lum1.toUShort(), lum1.toUShort(), lum1.toUShort(), alpha1.toUShort())
 }
 
 // RGB-offset format
-fun hdrRgboUnpack3(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    val v0 = colorUnquantizationTables[quantizationLevel][input[0]]
-    val v1 = colorUnquantizationTables[quantizationLevel][input[1]]
-    val v2 = colorUnquantizationTables[quantizationLevel][input[2]]
-    val v3 = colorUnquantizationTables[quantizationLevel][input[3]]
+fun hdrRgboUnpack3(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    val v0 = colorUnquantizationTables[quantizationLevel][input[0]].toInt()
+    val v1 = colorUnquantizationTables[quantizationLevel][input[1]].toInt()
+    val v2 = colorUnquantizationTables[quantizationLevel][input[2]].toInt()
+    val v3 = colorUnquantizationTables[quantizationLevel][input[3]].toInt()
 
     val modeval = v0 and 0xC0 shr 6 or (v1 and 0x80 shr 7 shl 2) or (v2 and 0x80 shr 7 shl 3)
 
     val majcomp: Int
     val mode: Int
-    if (modeval and 0xC != 0xC) {
-        majcomp = modeval shr 2
-        mode = modeval and 3
-    } else if (modeval != 0xF) {
-        majcomp = modeval and 3
-        mode = 4
-    } else {
-        majcomp = 0
-        mode = 5
+    when {
+        modeval and 0xC != 0xC -> {
+            majcomp = modeval shr 2
+            mode = modeval and 3
+        }
+        modeval != 0xF -> {
+            majcomp = modeval and 3
+            mode = 4
+        }
+        else -> {
+            majcomp = 0
+            mode = 5
+        }
     }
 
     var red = v0 and 0x3F
@@ -589,17 +607,17 @@ fun hdrRgboUnpack3(input: Array<Int>, quantizationLevel: Int, output0: Vector4, 
     if (blue0 < 0) {
         blue0 = 0
     }
-    output0.setValues(red0 shl 4, green0 shl 4, blue0 shl 4, 0x7800)
-    output1.setValues(red shl 4, green shl 4, blue shl 4, 0x7800)
+    output0.setValues((red0 shl 4).toUShort(), (green0 shl 4).toUShort(), (blue0 shl 4).toUShort(), 0x7800u)
+    output1.setValues((red shl 4).toUShort(), (green shl 4).toUShort(), (blue shl 4).toUShort(), 0x7800u)
 }
 
-fun hdrRgbUnpack3(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    val v0 = colorUnquantizationTables[quantizationLevel][input[0]]
-    val v1 = colorUnquantizationTables[quantizationLevel][input[1]]
-    val v2 = colorUnquantizationTables[quantizationLevel][input[2]]
-    val v3 = colorUnquantizationTables[quantizationLevel][input[3]]
-    val v4 = colorUnquantizationTables[quantizationLevel][input[4]]
-    val v5 = colorUnquantizationTables[quantizationLevel][input[5]]
+fun hdrRgbUnpack3(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    val v0 = colorUnquantizationTables[quantizationLevel][input[0]].toInt()
+    val v1 = colorUnquantizationTables[quantizationLevel][input[1]].toInt()
+    val v2 = colorUnquantizationTables[quantizationLevel][input[2]].toInt()
+    val v3 = colorUnquantizationTables[quantizationLevel][input[3]].toInt()
+    val v4 = colorUnquantizationTables[quantizationLevel][input[4]].toInt()
+    val v5 = colorUnquantizationTables[quantizationLevel][input[5]].toInt()
 
     // extract all the fixed-placement bitfields
     val modeval = v1 and 0x80 shr 7 or (v2 and 0x80 shr 7 shl 1) or (v3 and 0x80 shr 7 shl 2)
@@ -607,8 +625,8 @@ fun hdrRgbUnpack3(input: Array<Int>, quantizationLevel: Int, output0: Vector4, o
     val majcomp = v4 and 0x80 shr 7 or (v5 and 0x80 shr 7 shl 1)
 
     if(majcomp == 3) {
-        output0.setValues(v0 shl 8, v2 shl 8, (v4 and 0x7F) shl 9, 0x7800)
-        output1.setValues(v1 shl 8, v3 shl 8, (v5 and 0x7F) shl 9, 0x7800)
+        output0.setValues((v0 shl 8).toUShort(), (v2 shl 8).toUShort(), ((v4 and 0x7F) shl 9).toUShort(), 0x7800u)
+        output1.setValues((v1 shl 8).toUShort(), (v3 shl 8).toUShort(), ((v5 and 0x7F) shl 9).toUShort(), 0x7800u)
     }
 
     var a = v0 or (v1 and 0x40 shl 2)
@@ -619,8 +637,8 @@ fun hdrRgbUnpack3(input: Array<Int>, quantizationLevel: Int, output0: Vector4, o
     var d1 = v5 and 0x7f
 
     // get hold of the number of bits in 'd0' and 'd1'
-    val dbits_tab = intArrayOf(7, 6, 7, 6, 5, 6, 5, 6)
-    val dbits = dbits_tab[modeval]
+    val dbitsTab = intArrayOf(7, 6, 7, 6, 5, 6, 5, 6)
+    val dbits = dbitsTab[modeval]
 
     // extract six variable-placement bits
     val bit0 = v2 shr 6 and 1
@@ -680,22 +698,22 @@ fun hdrRgbUnpack3(input: Array<Int>, quantizationLevel: Int, output0: Vector4, o
     // note: this code assumes that signed right-shift actually sign-fills, not zero-fills.
     var d0x = d0
     var d1x = d1
-    val sx_shamt = 32 - dbits
-    d0x = d0x shl sx_shamt
-    d0x = d0x shr sx_shamt
-    d1x = d1x shl sx_shamt
-    d1x = d1x shr sx_shamt
+    val sxShamt = 32 - dbits
+    d0x = d0x shl sxShamt
+    d0x = d0x shr sxShamt
+    d1x = d1x shl sxShamt
+    d1x = d1x shr sxShamt
     d0 = d0x
     d1 = d1x
 
     // expand all values to 12 bits, with left-shift as needed.
-    val val_shamt = modeval shr 1 xor 3
-    a = a shl val_shamt
-    b0 = b0 shl val_shamt
-    b1 = b1 shl val_shamt
-    c = c shl val_shamt
-    d0 = d0 shl val_shamt
-    d1 = d1 shl val_shamt
+    val valShamt = modeval shr 1 xor 3
+    a = a shl valShamt
+    b0 = b0 shl valShamt
+    b1 = b1 shl valShamt
+    c = c shl valShamt
+    d0 = d0 shl valShamt
+    d1 = d1 shl valShamt
 
     // then compute the actual color values.
     var red1 = a
@@ -764,22 +782,22 @@ fun hdrRgbUnpack3(input: Array<Int>, quantizationLevel: Int, output0: Vector4, o
         }
     }
 
-    output0.setValues(red0 shl 4, green0 shl 4, blue0 shl 4, 0x7800)
-    output1.setValues(red1 shl 4, green1 shl 4, blue1 shl 4, 0x7800)
+    output0.setValues((red0 shl 4).toUShort(), (green0 shl 4).toUShort(), (blue0 shl 4).toUShort(), 0x7800u)
+    output1.setValues((red1 shl 4).toUShort(), (green1 shl 4).toUShort(), (blue1 shl 4).toUShort(), 0x7800u)
 }
 
-fun hdrRgbLdrAlphaUnpack3(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
+fun hdrRgbLdrAlphaUnpack3(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
     hdrRgbUnpack3(input, quantizationLevel, output0, output1)
 
-    val v6 = colorUnquantizationTables[quantizationLevel][input[6]]
-    val v7 = colorUnquantizationTables[quantizationLevel][input[7]]
+    val v6 = colorUnquantizationTables[quantizationLevel][input[6]].toUShort()
+    val v7 = colorUnquantizationTables[quantizationLevel][input[7]].toUShort()
     output0.w = v6
     output1.w = v7
 }
 
-fun hdrLuminanceSmallRangeUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    val v0 = colorUnquantizationTables[quantizationLevel][input[0]]
-    val v1 = colorUnquantizationTables[quantizationLevel][input[1]]
+fun hdrLuminanceSmallRangeUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    val v0 = colorUnquantizationTables[quantizationLevel][input[0]].toInt()
+    val v1 = colorUnquantizationTables[quantizationLevel][input[1]].toInt()
     val y0: Int
     var y1: Int
     if ((v0 and 0x80) != 0) {
@@ -794,13 +812,13 @@ fun hdrLuminanceSmallRangeUnpack(input: Array<Int>, quantizationLevel: Int, outp
     if (y1 > 0xFFF)
         y1 = 0xFFF
 
-    output0.setValues(y0 shl 4, y0 shl 4, y0 shl 4, 0x7800)
-    output1.setValues(y1 shl 4, y1 shl 4, y1 shl 4, 0x7800)
+    output0.setValues((y0 shl 4).toUShort(), (y0 shl 4).toUShort(), (y0 shl 4).toUShort(), 0x7800u)
+    output1.setValues((y1 shl 4).toUShort(), (y1 shl 4).toUShort(), (y1 shl 4).toUShort(), 0x7800u)
 }
 
-fun hdrLuminanceLargeRangeUnpack(input: Array<Int>, quantizationLevel: Int, output0: Vector4, output1: Vector4) {
-    val v0 = colorUnquantizationTables[quantizationLevel][input[0]]
-    val v1 = colorUnquantizationTables[quantizationLevel][input[1]]
+fun hdrLuminanceLargeRangeUnpack(input: IntArray, quantizationLevel: Int, output0: UShort4, output1: UShort4) {
+    val v0 = colorUnquantizationTables[quantizationLevel][input[0]].toInt()
+    val v1 = colorUnquantizationTables[quantizationLevel][input[1]].toInt()
 
     val y0: Int
     val y1: Int
@@ -811,6 +829,6 @@ fun hdrLuminanceLargeRangeUnpack(input: Array<Int>, quantizationLevel: Int, outp
         y0 = (v1 shl 4) + 8
         y1 = (v0 shl 4) - 8
     }
-    output0.setValues(y0 shl 4, y0 shl 4, y0 shl 4, 0x7800)
-    output1.setValues(y1 shl 4, y1 shl 4, y1 shl 4, 0x7800)
+    output0.setValues((y0 shl 4).toUShort(), (y0 shl 4).toUShort(), (y0 shl 4).toUShort(), 0x7800u)
+    output1.setValues((y1 shl 4).toUShort(), (y1 shl 4).toUShort(), (y1 shl 4).toUShort(), 0x7800u)
 }

@@ -1,4 +1,24 @@
-package com.fungames.kotlinASTC
+/*----------------------------------------------------------------------------*/
+/**
+ *	This confidential and proprietary software may be used only as
+ *	authorised by a licensing agreement from ARM Limited
+ *	(C) COPYRIGHT 2011-2012, 2018 ARM Limited
+ *	ALL RIGHTS RESERVED
+ *
+ *	The entire notice above must be reproduced on all authorised
+ *	copies and copies may only be made to the extent permitted
+ *	by a licensing agreement from ARM Limited.
+ *
+ *	@brief	Internal function and data declarations for ASTC codec.
+ *	@author rewritten to Kotlin by FunGames
+ */
+/*----------------------------------------------------------------------------*/
+
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
+package me.fungames.kotlinASTC
+
+import me.fungames.kotlinPointers.BytePointer
 
 const val MAX_WEIGHTS_PER_BLOCK = 64
 const val MAX_DECIMATION_MODES = 87
@@ -11,11 +31,11 @@ const val PARTITION_BITS = 10
 const val PARTITION_COUNT = (1 shl PARTITION_BITS)
 fun astcIsnan(p : Float) = ((p)!=(p))
 
-enum class ASTC_DecodeMode {
+enum class AstcDecodeMode {
     DECODE_LDR_SRGB,
     DECODE_LDR,
     DECODE_HDR
-};
+}
 
 enum class Bitness {
     BITNESS_8,
@@ -32,11 +52,11 @@ enum class Bitness {
 */
 class QuantizationAndTransferTable(
     var method : QuantizationMethod,
-    val unquantizedValue : Array<Int> = Array(32) {0},
-    val unquantizedValueFlt : Array<Float> = Array(32) {0f},
-    val prevQuantizedValue : Array<Int> = Array(32) {0},
-    val nextQuantizedValue : Array<Int> = Array(32) {0},
-    val closestQuantizedWeight : Array<Int> = Array(1025) {0}
+    val unquantizedValue : UByteArray = UByteArray(32),
+    val unquantizedValueFlt : FloatArray = FloatArray(32),
+    val prevQuantizedValue : UByteArray = UByteArray(32),
+    val nextQuantizedValue : UByteArray = UByteArray(32),
+    val closestQuantizedWeight : UByteArray = UByteArray(1025)
 )
 
 enum class EndpointFormats(var i : Int)
@@ -59,7 +79,7 @@ enum class EndpointFormats(var i : Int)
     FMT_HDR_RGBA(15);
 
     companion object {
-        fun getByValue(i : Int) = EndpointFormats.values().filter { it.i == i }.first()
+        fun getByValue(i : Int) = values().first { it.i == i }
     }
 }
 
@@ -83,11 +103,11 @@ class SwizzlePattern(
 */
 class PartitionInfo(
     var partitionCount: Int = 0,
-    val texelsPerPartition : Array<Int> = Array(4) {0},
-    val partitionOfTexel : Array<Int> = Array(MAX_TEXELS_PER_BLOCK) {0},
-    val texelsOfPartition : Array<Array<Int>> = Array(4) {Array(MAX_TEXELS_PER_BLOCK) {0} },
+    val texelsPerPartition : UByteArray = UByteArray(4),
+    val partitionOfTexel : UByteArray = UByteArray(MAX_TEXELS_PER_BLOCK),
+    val texelsOfPartition : Array<UByteArray> = Array(4) {UByteArray(MAX_TEXELS_PER_BLOCK)},
 
-    val coverageBitmaps : Array<ULong> = Array(4) {0.toULong()}
+    val coverageBitmaps : ULongArray = ULongArray(4)
 )
 
 /*
@@ -101,22 +121,22 @@ class PartitionInfo(
 class DecimationTable(
     var numTexels : Int = 0,
     var numWeights : Int = 0,
-    var texelNumWeights : Array<Int> = Array(MAX_TEXELS_PER_BLOCK) {0},
-    var texelWeightsInt : Array<Array<Int>> = Array(MAX_TEXELS_PER_BLOCK) { Array(4) {0} },
-    var texelWeightsFloat: Array<Array<Float>> = Array(MAX_TEXELS_PER_BLOCK) { Array(4) {0.0f} },
-    var texelWeights : Array<Array<Int>> = Array(MAX_TEXELS_PER_BLOCK) { Array(4) {0} },
-    var weightNumTexels : Array<Int> = Array(MAX_WEIGHTS_PER_BLOCK) {0},
-    var weightTexel : Array<Array<Int>> = Array(MAX_WEIGHTS_PER_BLOCK) { Array(MAX_TEXELS_PER_BLOCK) {0} },
-    var weightsInt : Array<Array<Int>> = Array(MAX_WEIGHTS_PER_BLOCK) { Array(MAX_TEXELS_PER_BLOCK) {0} },
-    var weightsFlt : Array<Array<Float>> = Array(MAX_WEIGHTS_PER_BLOCK) { Array(MAX_TEXELS_PER_BLOCK) {0.0f} }
+    var texelNumWeights : UByteArray = UByteArray(MAX_TEXELS_PER_BLOCK),
+    var texelWeightsInt : Array<UByteArray> = Array(MAX_TEXELS_PER_BLOCK) { UByteArray(4) },
+    var texelWeightsFloat: Array<FloatArray> = Array(MAX_TEXELS_PER_BLOCK) { FloatArray(4) },
+    var texelWeights : Array<UByteArray> = Array(MAX_TEXELS_PER_BLOCK) { UByteArray(4) },
+    var weightNumTexels : UByteArray = UByteArray(MAX_WEIGHTS_PER_BLOCK),
+    var weightTexel : Array<UByteArray> = Array(MAX_WEIGHTS_PER_BLOCK) { UByteArray(MAX_TEXELS_PER_BLOCK) },
+    var weightsInt : Array<UByteArray> = Array(MAX_WEIGHTS_PER_BLOCK) { UByteArray(MAX_TEXELS_PER_BLOCK) },
+    var weightsFlt : Array<FloatArray> = Array(MAX_WEIGHTS_PER_BLOCK) { FloatArray(MAX_TEXELS_PER_BLOCK) }
 )
 
 /*
    data structure describing information that pertains to a block size and its associated block modes.
 */
 class BlockMode(
-    var decimationMode : Int = 0,
-    var quantizationMode : Int = 0,
+    var decimationMode : Byte = 0,
+    var quantizationMode : Byte = 0,
     var isDualPlane : Boolean = false,
     var permitEncode : Boolean = false,
     var permitDecode : Boolean = false,
@@ -125,29 +145,29 @@ class BlockMode(
 
 class BlockSizeDescriptor(
     var decimationModeCount : Int = 0,
-    var decimationModeSamples : Array<Int> = Array(MAX_DECIMATION_MODES) {0},
-    var decimationModeMaxPrec1Plane: Array<Int> = Array(MAX_DECIMATION_MODES) {0},
-    var decimationModeMaxPrec2Planes: Array<Int> = Array(MAX_DECIMATION_MODES) {0},
-    var decimationModePercentile: Array<Float> = Array(MAX_DECIMATION_MODES) {0.0f},
-    var permitEncode : Array<Boolean> = Array(MAX_DECIMATION_MODES) {false},
-    val decimationTables : Array<DecimationTable> = Array(MAX_DECIMATION_MODES + 1) {DecimationTable()},
-    var blockModes: Array<BlockMode> = Array(MAX_WEIGHT_MODES) {BlockMode()},
+    var decimationModeSamples : IntArray = IntArray(MAX_DECIMATION_MODES),
+    var decimationModeMaxPrec1Plane: IntArray = IntArray(MAX_DECIMATION_MODES),
+    var decimationModeMaxPrec2Planes: IntArray = IntArray(MAX_DECIMATION_MODES),
+    var decimationModePercentile: FloatArray = FloatArray(MAX_DECIMATION_MODES),
+    var permitEncode : BooleanArray = BooleanArray(MAX_DECIMATION_MODES) {false},
+    val decimationTables : Array<DecimationTable> = Array(MAX_DECIMATION_MODES + 1) { DecimationTable() },
+    var blockModes: Array<BlockMode> = Array(MAX_WEIGHT_MODES) { BlockMode() },
 
     // for the k-means bed bitmap partitioning algorithm, we don't
     // want to consider more than 64 texels; this array specifies
     // which 64 texels (if that many) to consider.
     var texelcountForBitmapPartitioning : Int = 0,
-    var texelsForBitmapPartitioning : Array<Int> = Array(64) {0}
+    var texelsForBitmapPartitioning : IntArray = IntArray(64)
 )
 
 class ImageBlock (
-    var origData : Array<Float> = Array(MAX_TEXELS_PER_BLOCK * 4) {0.0f},  // original input data
-    var workData : Array<Float> = Array(MAX_TEXELS_PER_BLOCK * 4) {0.0f},  // the data that we will compress, either linear or LNS (0..65535 in both cases)
-    var derivData : Array<Float> = Array(MAX_TEXELS_PER_BLOCK * 4) {0.0f}, // derivative of the conversion function used, used to modify error weighting
+    var origData : FloatArray = FloatArray(MAX_TEXELS_PER_BLOCK * 4),  // original input data
+    var workData : FloatArray = FloatArray(MAX_TEXELS_PER_BLOCK * 4),  // the data that we will compress, either linear or LNS (0..65535 in both cases)
+    var derivData : FloatArray = FloatArray(MAX_TEXELS_PER_BLOCK * 4), // derivative of the conversion function used, used to modify error weighting
 
-    var rgbLns : Array<Boolean> = Array(MAX_TEXELS_PER_BLOCK) {false},      // 1 if RGB data are being treated as LNS
-    var alphaLns : Array<Boolean> = Array(MAX_TEXELS_PER_BLOCK) {false},    // 1 if Alpha data are being treated as LNS
-    var nanTexel : Array<Boolean> = Array(MAX_TEXELS_PER_BLOCK) {false},    // 1 if the texel is a NaN-texel.
+    var rgbLns : BooleanArray = BooleanArray(MAX_TEXELS_PER_BLOCK),      // 1 if RGB data are being treated as LNS
+    var alphaLns : BooleanArray = BooleanArray(MAX_TEXELS_PER_BLOCK),    // 1 if Alpha data are being treated as LNS
+    var nanTexel : BooleanArray = BooleanArray(MAX_TEXELS_PER_BLOCK),    // 1 if the texel is a NaN-texel.
 
     var redMin : Float = 0.0f, var redMax : Float = 0.0f,
     var greenMin : Float = 0.0f, var greenMax : Float = 0.0f,
@@ -159,8 +179,8 @@ class ImageBlock (
 
 )
 
-class PhysicalCompressedBlock(val data : Array<UByte>) {
-    constructor(ptr : Pointer<Byte>) : this(arrayOf(ptr[0].toUByte(), ptr[1].toUByte(), ptr[2].toUByte(), ptr[3].toUByte(), ptr[4].toUByte(), ptr[5].toUByte(), ptr[6].toUByte(), ptr[7].toUByte(), ptr[8].toUByte(), ptr[9].toUByte(), ptr[10].toUByte(), ptr[11].toUByte(), ptr[12].toUByte(), ptr[13].toUByte(), ptr[14].toUByte(), ptr[15].toUByte()))
+class PhysicalCompressedBlock(val data : UByteArray) {
+    constructor(ptr : BytePointer) : this(ptr.asArray().copyOfRange(ptr.pos, ptr.pos + 16).toUByteArray())
     init {
         require(data.size == 16) { "PhysicalCompressedBlocks must be 16 bytes big" }
     }
@@ -171,14 +191,14 @@ class SymbolicCompressedBlock(
     var blockMode : Int = 0,
     var partitionCount : Int = 0,
     var partitionIndex : Int = 0,
-    var colorFormats : Array<Int> = Array(4) {0},
+    var colorFormats : IntArray = IntArray(4),
     var colorFormatsMatched : Boolean = false,
-    var colorValues : Array<Array<Int>> = Array(4) {Array(12) {0}},
+    var colorValues : Array<IntArray> = Array(4) {IntArray(12)},
     var colorQuantizationLevel : Int = 0,
-    var plane1Weights : Array<UByte> = Array(MAX_WEIGHTS_PER_BLOCK) {0.toUByte()},
-    var plane2Weights: Array<UByte> = Array(MAX_WEIGHTS_PER_BLOCK) {0.toUByte()},
+    var plane1Weights : UByteArray = UByteArray(MAX_WEIGHTS_PER_BLOCK),
+    var plane2Weights: UByteArray = UByteArray(MAX_WEIGHTS_PER_BLOCK),
     var plane2ColorComponent : Int = 0,
-    var constantColor : Array<Int> = Array(4) {0}
+    var constantColor : IntArray = IntArray(4)
 )
 
 enum class QuantizationMethod(var i : Int) {
@@ -207,6 +227,6 @@ enum class QuantizationMethod(var i : Int) {
     QUANT_256(20);
 
     companion object {
-        fun getByValue(i : Int) = QuantizationMethod.values().filter { it.i == i }.first()
+        fun getByValue(i : Int) = values().first { it.i == i }
     }
 }

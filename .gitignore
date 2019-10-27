@@ -1,3 +1,4 @@
 /.gradle
 /build
 /src/test
+/gradle.properties
