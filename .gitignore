@@ -1,4 +1,5 @@
 /.gradle
 /build
-/src/test
 /gradle.properties
+/src/test
+/.idea

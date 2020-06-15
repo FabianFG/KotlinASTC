@@ -132,7 +132,6 @@ fun UShort.toFloat16(): Float {
         } while (mant and 0x400 == 0) // while not normal
         mant = mant and 0x3ff // discard subnormal bit
     } // else +/-0 -> +/-0
-    val f = 0.0f
     return Float.fromBits( // combine all parts
         hbits and 0x8000 shl 16 // sign << ( 31 - 15 )
                 or (exp or mant shl 13)
