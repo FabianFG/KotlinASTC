@@ -13,13 +13,13 @@ repositories {
     mavenLocal()
     jcenter()
     maven {
-        url  "https://dl.bintray.com/fungamesleaks/mavenRepo"
+        url  "https://jitpack.io"
     }
 }
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation 'me.fungames:KotlinPointers:1.0'
+    implementation 'com.github.FabianFG:KotlinPointers:1.1'
 }
 
 jar {
